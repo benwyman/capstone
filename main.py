@@ -9,7 +9,7 @@ def main(query, start_date, end_date):
     risk_level = 0
     # Fetch news data
     df_news = fetch_news(query, start_date, end_date)
-
+    print("hi")
     # Print the fetched news DataFrame
     print("Fetched News Data:")
     print(df_news)
