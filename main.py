@@ -54,12 +54,12 @@ def main(query, start_date, end_date):
     graph_bollinger_bands(df_stock, query)
 
     # Check 52 Week Price Range
-    range_check_result = check_52_week_range(query, threshold=10)  # Example threshold
+    range_check_result = check_52_week_range(query, threshold=10)
     print("52 Week Range Check:", range_check_result)
     risk_level += range_check_result
 
     # Check Bollinger Bands Percent
-    bollinger_check_result = check_bollinger_bands_percent(query, threshold=15)  # Example threshold
+    bollinger_check_result = check_bollinger_bands_percent(query, threshold=15)
     print("Bollinger Bands Percent Check:", bollinger_check_result)
     risk_level += bollinger_check_result
 
@@ -67,6 +67,13 @@ def main(query, start_date, end_date):
     ma_comparison_result = compare_moving_average(query)
     print("Moving Average Comparison:", ma_comparison_result)
     risk_level += ma_comparison_result
+
+    # Check MACD Signal Crossings
+    macd_signal_crossings_result = calculate_macd_signal_crossings(query, 3)
+    print(f"MACD Signal Crossings Risk for {query} over 30:", macd_signal_crossings_result)
+    risk_level += macd_signal_crossings_result
+
+
 
     # Check Insider Purchases
     # insider_purchases_result = check_insider_purchases(query)
@@ -81,6 +88,23 @@ def main(query, start_date, end_date):
     # top_mutual_fund_holders = get_top_mutual_fund_holders(query)
     # print("Top Mutual Fund Holders:")
     # print(top_mutual_fund_holders)
+
+    # ADX Check
+    adx_days = 60  # Example: 60 days
+    print(f"Calculating ADX for {query} over the last {adx_days} days...")
+    adx_result = calculate_adx(query, adx_days)
+    print("ADX Results:")
+    print(adx_result.tail())  # Display the last few rows of the ADX result
+
+    # Interpret ADX results
+    latest_adx = adx_result['ADX'].iloc[-1]
+    print(f"Latest ADX value for {query}: {latest_adx}")
+    if latest_adx > 25:
+        print("Strong trend detected.")
+    elif latest_adx > 20:
+        print("There is a trend.")
+    else:
+        print("Weak or no trend.")
 
     # Check Volume Growth
     volume_growth_result = check_volume_growth(3, 20, query)  # Example days and percent_target

@@ -1,3 +1,4 @@
+import pandas as pd
 import yfinance as yf
 from datetime import datetime
 import pytz
@@ -198,12 +199,107 @@ def analyze_sentiment_and_volume_growth(df_summary, volume_growth_result, volume
     return risk_level
 
 
+def calculate_macd(ticker, days):
+    print(f"Calculating MACD for {ticker} over {days} days...")
+
+    # fetch historical data for the specified period
+    print(f"Downloading stock data for the past {days} days...")
+    stock_data = yf.download(ticker, period=f'{days}d')
+    prices = stock_data['Close']
+
+    # calculate EMA for 12 days and 26 days
+    ema_12 = prices.ewm(span=12, adjust=False).mean()
+    ema_26 = prices.ewm(span=26, adjust=False).mean()
+
+    # calculate MACD line
+    macd_line = ema_12 - ema_26
+    print("MACD line calculated.")
+
+    # calculate signal line (EMA for 9 days of MACD line)
+    signal_line = macd_line.ewm(span=9, adjust=False).mean()
+    print("Signal line calculated.")
+
+    return macd_line, signal_line
+
+
+def calculate_macd_signal_crossings(ticker, days):
+    print(f"Calculating MACD Signal Crossings and Risk Level for {ticker} over {days} days...")
+
+    # Calculate MACD and signal line for the specified period
+    macd_line, signal_line = calculate_macd(ticker, days)
+
+    # Initialize risk level score
+    risk_level = 0
+
+    # Iterate through the data to adjust risk level
+    for i in range(len(macd_line)):
+        if macd_line.iloc[i] > signal_line.iloc[i]:
+            risk_level += 1  # Add 1 for a buy signal (MACD above signal line)
+            print(f"Day {i}: MACD above signal line, risk level increased to {risk_level}.")
+        elif macd_line.iloc[i] < signal_line.iloc[i]:
+            risk_level -= 1  # Subtract 1 for a sell signal (MACD below signal line)
+            print(f"Day {i}: MACD below signal line, risk level decreased to {risk_level}.")
+
+    # Handling the scenario where risk level is 0
+    if risk_level == 0:
+        current_position = 1 if macd_line.iloc[-1] > signal_line.iloc[-1] else -1
+        print(f"Final risk level is 0. Current day's MACD position used for final decision: {current_position}")
+        return current_position
+
+    print(f"Finished calculating MACD signal crossings. Final risk level: {risk_level}")
+    return risk_level
+
+
+def calculate_adx(ticker, days):
+    # Retrieve historical data for the ticker
+    data = yf.download(ticker, period=f'{days}d')
+
+    # Initialize columns for calculations
+    data['+DM'] = 0.0
+    data['-DM'] = 0.0
+    data['TR'] = 0.0
+    data['Smoothed +DM'] = 0.0
+    data['Smoothed -DM'] = 0.0
+    data['Smoothed TR'] = 0.0
+    data['+DI'] = 0.0
+    data['-DI'] = 0.0
+    data['DX'] = 0.0
+    data['ADX'] = 0.0
+
+    # Calculate +DM, -DM, and TR
+    for i in range(1, len(data)):
+        data.loc[data.index[i], '+DM'] = max(data['High'].iloc[i] - data['High'].iloc[i-1], 0)
+        data.loc[data.index[i], '-DM'] = max(data['Low'].iloc[i-1] - data['Low'].iloc[i], 0)
+        high_low = data['High'].iloc[i] - data['Low'].iloc[i]
+        high_close = abs(data['High'].iloc[i] - data['Close'].iloc[i-1])
+        low_close = abs(data['Low'].iloc[i] - data['Close'].iloc[i-1])
+        data.loc[data.index[i], 'TR'] = max(high_low, high_close, low_close)
+
+    # Calculate smoothed values
+    for i in range(14, len(data)):
+        data.loc[data.index[i], 'Smoothed +DM'] = (data['+DM'].iloc[i-13:i+1].sum() - data['+DM'].iloc[i-13:i+1].sum() / 14) + data['+DM'].iloc[i]
+        data.loc[data.index[i], 'Smoothed -DM'] = (data['-DM'].iloc[i-13:i+1].sum() - data['-DM'].iloc[i-13:i+1].sum() / 14) + data['-DM'].iloc[i]
+        data.loc[data.index[i], 'Smoothed TR'] = (data['TR'].iloc[i-13:i+1].sum() - data['TR'].iloc[i-13:i+1].sum() / 14) + data['TR'].iloc[i]
+
+    # Calculate +DI, -DI, DX
+    for i in range(14, len(data)):
+        data.loc[data.index[i], '+DI'] = (data['Smoothed +DM'].iloc[i] / data['Smoothed TR'].iloc[i]) * 100
+        data.loc[data.index[i], '-DI'] = (data['Smoothed -DM'].iloc[i] / data['Smoothed TR'].iloc[i]) * 100
+        data.loc[data.index[i], 'DX'] = abs(data['+DI'].iloc[i] - data['-DI'].iloc[i]) / (data['+DI'].iloc[i] + data['-DI'].iloc[i]) * 100
+
+    # Calculate ADX
+    for i in range(28, len(data)):
+        data.loc[data.index[i], 'ADX'] = data['DX'].iloc[i - 13:i + 1].mean()
+
+    return data[['Smoothed +DM', 'Smoothed -DM', 'ADX']]
+
+
 def graph_bollinger_bands(df_stock, ticker):
     plt.figure(figsize=(15, 7))
     plt.plot(df_stock['Close'], label='Closing Price', color='blue')
 
     k_values = [10, 13, 30]
-    colors = ['green', 'orange', 'cyan']  # Different colors for different k values
+    colors = ['green', 'orange', 'cyan']
     for i, k in enumerate(k_values):
         ma_col = f'Moving_Average_{k}'
         upper_band_col = f'Upper_Band_{k}'
