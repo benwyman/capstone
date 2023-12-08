@@ -1,6 +1,8 @@
 import pandas as pd
 import yfinance as yf
-from datetime import datetime
+import web_scraper
+import sentiment_tool
+import datetime
 import pytz
 from matplotlib import pyplot as plt
 
@@ -29,6 +31,7 @@ def compare_moving_average(ticker):
         print(f"Current price is below the average and will likely converge upwards.")
     else:
         print(f"Current price is above the average and will likely converge downwards.")
+    print("Moving Average Comparison:", risk_level)
     return risk_level
 
 
@@ -68,7 +71,7 @@ def calculate_bollinger_band_spread(ticker):
     # Calculate percentage spread as a percentage of average closing price
     percent_spread = ((avg_upper_band - avg_lower_band) / stock_data['Close'].mean()) * 100
     print(f"Percentage spread of Bollinger Bands for {ticker} is {percent_spread:.2f}%")
-
+    print("Bollinger Band Spread Comparison:", percent_spread)
     return percent_spread
 
 
@@ -101,6 +104,7 @@ def check_52_week_range(ticker, threshold):
     else:
         print(f"Difference between 52-week average and current price is below the {threshold}% risk threshold.")
     risk_level = -1 if percent_diff > threshold else 1
+    print("52 Week Price Range Comparison:", risk_level)
     return risk_level
 
 
@@ -128,12 +132,12 @@ def get_top_mutual_fund_holders(ticker):
         return "No mutual fund holder data available."
 
 
-def check_volume_growth(days, threshold, ticker):
+def check_volume_growth(ticker, days, threshold):
     # Set timezone for New York
     ny_tz = pytz.timezone('America/New_York')
 
     # Get the current datetime in New York time
-    current_datetime = datetime.now(ny_tz)
+    current_datetime = datetime.datetime.now(ny_tz)
 
     # Fetch enough data to cover the days for analysis plus 2 extra days
     # (one for the control day, another in case today is incomplete)
@@ -196,14 +200,42 @@ def analyze_sentiment_and_volume_growth(df_summary, volume_growth_result, volume
             risk_level = 1
     else:
         print(f"The volume shift was under {volume_threshold}% so sentiment is less likely related to the share price. Risk level unadjusted.")
+
+    return risk_level
+
+
+def total_sentiment_analysis(ticker, days, threshold):
+    end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(days)
+    # Convert start_date and end_date to strings in the format 'YYYY-MM-DD'
+    start_date = start_date.strftime('%Y-%m-%d')
+    end_date = end_date.strftime('%Y-%m-%d')
+    df_news = web_scraper.fetch_news(ticker, start_date, end_date)
+    # Print the fetched news DataFrame
+    print("Fetched News Data:")
+    print(df_news)
+
+    # Analyze the data
+    analyzed_df = sentiment_tool.analyze_data(df_news)
+
+    # Print the analyzed sentiment data
+    print("Analyzed Sentiment Data:")
+    print(analyzed_df)
+
+    print("Summarizing sentiment data...")
+    df_summary = sentiment_tool.summarize_sentiment_data(analyzed_df)
+
+    # Check Volume Growth
+    volume_growth_result = check_volume_growth(ticker, days, threshold)  # Example days and percent_target
+    print("Volume Growth Check:", volume_growth_result)
+
+    sentiment_result = analyze_sentiment_and_volume_growth(df_summary, volume_growth_result, volume_threshold=20)
+    risk_level = sentiment_result
     return risk_level
 
 
 def calculate_macd(ticker, days):
-    print(f"Calculating MACD for {ticker} over {days} days...")
-
     # fetch historical data for the specified period
-    print(f"Downloading stock data for the past {days} days...")
     stock_data = yf.download(ticker, period=f'{days}d')
     prices = stock_data['Close']
 
@@ -246,11 +278,12 @@ def calculate_macd_signal_crossings(ticker, days):
         print(f"Final risk level is 0. Current day's MACD position used for final decision: {current_position}")
         return current_position
 
-    print(f"Finished calculating MACD signal crossings. Final risk level: {risk_level}")
+    print(f"MACD Signal Crossings Risk for {ticker} over {days}days: ", risk_level)
     return risk_level
 
 
 def calculate_adx(ticker, days):
+    print(f"Calculating ADX for {ticker} over the last {days} days...")
     # Retrieve historical data for the ticker
     data = yf.download(ticker, period=f'{days}d')
 
@@ -290,6 +323,19 @@ def calculate_adx(ticker, days):
     # Calculate ADX
     for i in range(28, len(data)):
         data.loc[data.index[i], 'ADX'] = data['DX'].iloc[i - 13:i + 1].mean()
+
+    print("ADX Results:")
+    print(data.tail())  # Display the last few rows of the ADX result
+
+    # Interpret ADX results
+    latest_adx = data['ADX'].iloc[-1]
+    print(f"Latest ADX value for {ticker}: {latest_adx}")
+    if latest_adx > 25:
+        print("Strong trend detected.")
+    elif latest_adx > 20:
+        print("There is a trend.")
+    else:
+        print("Weak or no trend.")
 
     return data[['Smoothed +DM', 'Smoothed -DM', 'ADX']]
 
