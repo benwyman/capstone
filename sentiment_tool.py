@@ -69,7 +69,7 @@ def analyze_data(df):
 
 
 def graph_sentiment_by_date(original_df):
-    df = original_df.copy()  # Create a copy of the DataFrame
+    df = original_df.copy()
     df['date'] = pd.to_datetime(df['date'])
     df.set_index('date', inplace=True)
     average_sentiment_per_week = df['score'].resample('W').mean().reset_index()
@@ -138,20 +138,20 @@ def summarize_sentiment_data(df):
 
     summary = {'total_texts': len(df)}
 
-    # Counts and ratios for each sentiment type
+    # calculates and counts ratios for each sentiment type
     sentiment_counts = df['sentiment'].value_counts()
     summary['sentiment_counts'] = sentiment_counts.to_dict()
 
-    # Percent ratio of positive/negative sentiment
+    # percent ratio of positive/negative sentiment
     positive_ratio = (sentiment_counts.get('Positive', 0) / summary['total_texts']) * 100
     negative_ratio = (sentiment_counts.get('Negative', 0) / summary['total_texts']) * 100
     summary['positive_ratio'] = positive_ratio
     summary['negative_ratio'] = negative_ratio
 
-    # Average sentiment score
+    # average sentiment score
     summary['average_sentiment_score'] = df['score'].mean()
 
-    # Print the summary
+    # print the summary
     print("Sentiment Analysis Summary:")
     print(f"Total Texts: {summary['total_texts']}")
     print(f"Sentiment Counts: {summary['sentiment_counts']}")
