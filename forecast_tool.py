@@ -223,7 +223,8 @@ def check_volume_growth(ticker, days, threshold):
         prev_volume = current_volume
 
     # calculate the average of these growth percentages
-    average_growth = sum(daily_growth_percentages) / len(daily_growth_percentages) if daily_growth_percentages else 0
+    average_growth = sum(abs(growth) for growth in daily_growth_percentages) / len(
+        daily_growth_percentages) if daily_growth_percentages else 0
     print(f"Average growth in volume over {days} days is {average_growth}%")
 
     # check if the average growth meets the target
@@ -296,7 +297,7 @@ def calculate_macd(ticker):
     :return: Tuple of MACD line and signal line.
     """
     # fetch historical data for the specified period
-    stock_data = yf.download(ticker, period=30)
+    stock_data = yf.download(ticker, period=str(30))
     prices = stock_data['Close']
 
     # calculate EMA for 12 days and 26 days
@@ -516,4 +517,11 @@ def calculate_risk(query, days, threshold):
     risk_level += sentiment_result
 
     print("Final Risk Level: ", risk_level)
+    if risk_level > 1:
+        print("This stock does not seem risky, I would consider buying or holding.")
+    elif risk_level < -1:
+        print("This stock seems risky, I would consider selling or holding.")
+    else:
+        print("I don't have any strong feelings about this stock.")
+
     return risk_level

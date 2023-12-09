@@ -10,7 +10,7 @@ def display_menu():
     print("4. MACD Signal Crossings for {ticker} over {days}")
     print("5. Bollinger Bands Percent for {ticker} with risk threshold {%}")
     print("6. ADX for {ticker} over {days}")
-    print("7. Check sentiment of {ticker} over {days} with risk threshold {%}. (3 days recommended)")
+    print("7. Check sentiment of {ticker} over {days} with risk threshold {%}. (3 days and 20% recommended)")
     print("8. Check Holders for {ticker}")
     print("9. Calculate Risk for {ticker} between over {days} with risk threshold {%}")
     print("0. Print Menu")
