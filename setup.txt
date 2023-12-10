@@ -1,4 +1,5 @@
-Clone the repository into an empty Python project
+if necessary
+  Clone the repository into an empty Python project
 Use PyCharm or navigate on the terminal to the directory of the repository and run 
 pip install -r requirements.txt to download all of the necessary packages.
 Run main class and use various prompts to test functionality
